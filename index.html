@@ -4,19 +4,23 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>MLB Rankings – Owned vs FA (Auto-Load CSV)</title>
-<style>
-  :root {
-    --bg: #0e1116;
-    --panel: #151a21;
-    --panel-2: #1b212a;
-    --text: #e7edf3;
-    --muted: #9fb0c3;
-    --accent: #4da3ff;
-    --accent-2: #2ad1a3;
-    --warn: #ffb84d;
-    --danger: #ff6b6b;
-    --border: #2a3441;
-  }
+<style>:root 
+{
+  /* Core palette (grays + subtle accents) */
+  --bg: #f5f6f8;           /* page background */
+  --panel: #ffffff;        /* card/panel/table background */
+  --panel-2: #cccccc;      /* inputs & secondary surfaces */
+  --text: #1d232b;         /* primary text */
+  --muted: #ffffff;        /* secondary text */
+  --border: #d8dde3;       /* hairline borders */
+
+  /* Accents kept minimal (still gray-friendly) */
+  --accent: #5c89ff;       /* buttons/links (soft blue for clarity) */
+  --accent-2: #2f9e66;     /* success/FA indicator (desaturated green) */
+  --warn: #e7a23c;         /* warnings (muted amber) */
+  --danger: #e06262;       /* errors (muted red) */
+}
+
   html, body {
     background: var(--bg);
     color: var(--text);
@@ -24,7 +28,7 @@
     font-family: system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif;
     line-height: 1.4;
   }
-  .wrap { max-width: 1100px; margin: 0 auto; padding: 20px; }
+  .wrap { max-width: 85%; margin: 0 auto; padding: 20px; }
   header { display: grid; gap: 10px; margin-bottom: 16px; }
   h1 { font-size: 28px; margin: 0; font-weight: 700; letter-spacing: 0.2px; }
   .sub { color: var(--muted); font-size: 14px; }
@@ -60,8 +64,7 @@
     padding: 10px 12px; border-bottom: 1px solid var(--border); cursor: pointer; user-select: none; white-space: nowrap;
   }
   tbody td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
-  tbody tr:hover { background: #131a22; }
-  tbody tr:nth-child(2n) { background: #0f151c; }
+  tbody tr:nth-child(2n) { background: #9cb1c9; }
   .rank { font-weight: 700; color: var(--accent-2); }
   .tier {
     display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; border: 1px solid var(--border); color: var(--text); background: #17202a;
