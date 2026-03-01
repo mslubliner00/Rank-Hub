@@ -10,8 +10,9 @@
   --bg: #f5f6f8;           /* page background */
   --panel: #ffffff;        /* card/panel/table background */
   --panel-2: #cccccc;      /* inputs & secondary surfaces */
-  --text: #1d232b;         /* primary text */
-  --muted: #ffffff;        /* secondary text */
+  --text: #000000;         /* primary text */
+  --text2:#cccccc;
+  --muted: #000000;        /* secondary text */
   --border: #d8dde3;       /* hairline borders */
 
   /* Accents kept minimal (still gray-friendly) */
@@ -60,7 +61,7 @@
   }
   table { width: 100%; border-collapse: collapse; font-size: 14px; }
   thead th {
-    position: sticky; top: 0; background: #10161d; color: var(--muted); text-align: left;
+    position: sticky; top: 0; background: #10161d; color: #ffffff; text-align: left;
     padding: 10px 12px; border-bottom: 1px solid var(--border); cursor: pointer; user-select: none; white-space: nowrap;
   }
   tbody td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
@@ -314,7 +315,7 @@ function render(){
         <td>${r.Pos ?? ''}</td>
         <td>${r.Tier ? `<span class="${tierClass(r.Tier)}">Tier ${r.Tier}</span>` : ''}</td>
         <td>${r.Notes ?? ''}</td>
-        <td style="font-weight:600; color:${isFA ? 'var(--accent-2)' : '#e7edf3'};">
+        <td style="font-weight:600; color:${isFA ? 'var(--accent-2)' : '#000000'};">
           ${isFA ? 'FA' : `Owned${owner && owner!=='Owned' ? ` by ${owner}` : ''}`}
         </td>
       </tr>
@@ -436,4 +437,4 @@ async function autoLoad(force=false){
 document.addEventListener('DOMContentLoaded', () => autoLoad(false));
 </script>
 </body>
-</html>
+</html
