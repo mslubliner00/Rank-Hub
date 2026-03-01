@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>MLB Rankings – Owned vs FA (Auto-Load CSV)</title>
+<style>
+  :root {
+    --bg: #0e1116;
+    --panel: #151a21;
+    --panel-2: #1b212a;
+    --text: #e7edf3;
+    --muted: #9fb0c3;
+    --accent: #4da3ff;
+    --accent-2: #2ad1a3;
+    --warn: #ffb84d;
+    --danger: #ff6b6b;
+    --border: #2a3441;
+  }
+  html, body {
+    background: var(--bg);
+    color: var(--text);
+    margin: 0;
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif;
+    line-height: 1.4;
+  }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 20px; }
+  header { display: grid; gap: 10px; margin-bottom: 16px; }
+  h1 { font-size: 28px; margin: 0; font-weight: 700; letter-spacing: 0.2px; }
+  .sub { color: var(--muted); font-size: 14px; }
+
+  .controls {
+    display: flex; flex-wrap: wrap; gap: 10px;
+    background: var(--panel); padding: 12px; border-radius: 10px; border: 1px solid var(--border);
+  }
+  .controls > * { flex: 1 1 200px; min-width: 180px; }
+  .input, select, button, label.btnlike {
+    width: 100%; background: var(--panel-2); border: 1px solid var(--border);
+    color: var(--text); padding: 10px 12px; border-radius: 8px; font-size: 14px;
+  }
+  .input::placeholder { color: #8aa0b6; }
+  .btn {
+    background: linear-gradient(180deg, var(--accent) 0%, #3c83d6 100%);
+    color: #0b0e13; font-weight: 700; cursor: pointer; border: none;
+  }
+  .btn.secondary { background: none; color: var(--text); border: 1px solid var(--border); }
+  .inline { display:flex; align-items:center; gap:8px; }
+
+  .status {
+    margin-top:10px;padding:10px;border-radius:8px;
+    background:#1b212a;border:1px solid #2a3441;color:#e7edf3;display:none;
+  }
+
+  .table-wrap {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 12px; overflow: clip; margin-top: 14px;
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  thead th {
+    position: sticky; top: 0; background: #10161d; color: var(--muted); text-align: left;
+    padding: 10px 12px; border-bottom: 1px solid var(--border); cursor: pointer; user-select: none; white-space: nowrap;
+  }
+  tbody td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tbody tr:hover { background: #131a22; }
+  tbody tr:nth-child(2n) { background: #0f151c; }
+  .rank { font-weight: 700; color: var(--accent-2); }
+  .tier {
+    display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; border: 1px solid var(--border); color: var(--text); background: #17202a;
+  }
+  .tier-1 { border-color: #3ddc97; background: #11251e; }
+  .tier-2 { border-color: #4da3ff; background: #112033; }
+  .tier-3 { border-color: #ffb84d; background: #2a200f; }
+  .tier-4 { border-color: #ff6b6b; background: #2a1212; }
+  .meta { color: var(--muted); font-size: 12px; }
+  .footer { color: var(--muted); font-size: 12px; margin-top: 10px; }
+  .hidden { display:none; }
+  @media (max-width: 720px) {
+    thead th:nth-child(6), tbody td:nth-child(6) { display: none; } /* hide Notes on small screens */
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>RANK-HUB</h1>
+      <div class="sub">Auto-loads <code>rankings.csv</code> and <code>league.csv</code> from this folder. Falls back to file pickers if not found.</div>
+    </header>
+
+    <div class="controls">
+      <input id="search" class="input" type="search" placeholder="Search player or team…" />
+      <select id="position">
+        <option value="">All Positions</option>
+        <option>C</option><option>1B</option><option>2B</option><option>3B</option><option>SS</option>
+        <option>OF</option><option>SP</option><option>RP</option><option>UT</option>
+      </select>
+      <select id="team">
+        <option value="">All Teams</option>
+        <option>ATL</option><option>BAL</option><option>BOS</option><option>CHC</option><option>CHW</option><option>CIN</option><option>CLE</option><option>COL</option>
+        <option>DET</option><option>HOU</option><option>KCR</option><option>LAA</option><option>LAD</option><option>MIA</option><option>MIL</option><option>MIN</option>
+        <option>NYM</option><option>NYY</option><option>OAK</option><option>PHI</option><option>PIT</option><option>SDP</option><option>SFG</option><option>SEA</option>
+        <option>STL</option><option>TBR</option><option>TEX</option><option>TOR</option><option>WSN</option>
+      </select>
+      <div class="inline">
+        <input id="onlyFA" type="checkbox" />
+        <label for="onlyFA">Free agents only</label>
+      </div>
+      <button id="reload" class="btn secondary">Reload</button>
+
+      <!-- Fallback file pickers (shown if auto-load fails or you want to swap files) -->
+      <label class="btn secondary btnlike" for="fileRanks">Choose Rankings CSV</label>
+      <input id="fileRanks" type="file" class="hidden" accept=".csv" />
+      <label class="btn secondary btnlike" for="fileLeague">Choose League CSV</label>
+      <input id="fileLeague" type="file" class="hidden" accept=".csv" />
+    </div>
+
+    <div id="status" class="status"></div>
+
+    <div class="table-wrap">
+      <table id="table">
+        <thead>
+          <tr>
+            <th data-key="Rank"  data-type="number">Rank ⬍</th>
+            <th data-key="Player" data-type="string">Player ⬍</th>
+            <th data-key="Team"   data-type="string">Team ⬍</th>
+            <th data-key="Pos"    data-type="string">Pos ⬍</th>
+            <th data-key="Tier"   data-type="number">Tier ⬍</th>
+            <th data-key="Notes"  data-type="string">Notes ⬍</th>
+            <th data-key="Status" data-type="string">Status ⬍</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div class="footer">
+      Tip: Use the “Free agents only” toggle and sort Status to find pickups fast.
+    </div>
+  </div>
+
+<script>
+/* ===========================
+   UI helpers (status banner)
+   =========================== */
+function setStatus(msg, type='info') {
+  const el = document.getElementById('status');
+  const colors = {
+    info:   {bg:'#1b212a', border:'#2a3441'},
+    ok:     {bg:'#11251e', border:'#3ddc97'},
+    warn:   {bg:'#2a200f', border:'#ffb84d'},
+    error:  {bg:'#2a1212', border:'#ff6b6b'}
+  };
+  const c = colors[type] || colors.info;
+  el.style.display = 'block';
+  el.style.background = c.bg;
+  el.style.borderColor = c.border;
+  el.textContent = msg;
+}
+function clearStatus(){ const el = document.getElementById('status'); el.style.display='none'; el.textContent=''; }
+
+/* ===========================
+   CSV parsing + normalization
+   =========================== */
+function stripBOM(text){ return text.charCodeAt(0)===0xFEFF ? text.slice(1) : text; }
+function detectDelimiter(sample){
+  const s = sample.slice(0, 2000);
+  const counts = [
+    {delim:',', count:(s.match(/,/g)||[]).length},
+    {delim:'\t', count:(s.match(/\t/g)||[]).length},
+    {delim:';', count:(s.match(/;/g)||[]).length}
+  ].sort((a,b)=>b.count-a.count);
+  return counts[0].count>0 ? counts[0].delim : ',';
+}
+function parseCSVFlexible(text){
+  text = stripBOM(text).replace(/\r\n/g, '\n');
+  const delim = detectDelimiter(text);
+  const lines = text.trim().split('\n').filter(l => l.length>0);
+  if (!lines.length) return { headers: [], rows: [], delim };
+
+  function parseLine(line){
+    const out = [];
+    let cur = '', inQ = false;
+    for (let i=0;i<line.length;i++){
+      const c = line[i];
+      if (c === '"'){
+        if (inQ && line[i+1] === '"'){ cur += '"'; i++; }
+        else { inQ = !inQ; }
+      } else if (c === delim && !inQ){
+        out.push(cur); cur='';
+      } else {
+        cur += c;
+      }
+    }
+    out.push(cur);
+    return out;
+  }
+
+  const headers = parseLine(lines[0]).map(h => h.trim());
+  const rows = lines.slice(1).map(line => {
+    const cells = parseLine(line);
+    const obj = {};
+    headers.forEach((h,i)=> obj[h] = (cells[i] ?? '').trim());
+    return obj;
+  });
+
+  return { headers, rows, delim };
+}
+
+function normalizeRankingsRows(rows){
+  return rows.map(r => ({
+    Rank:   r.Rank ?? r.rank ?? r.Overall ?? r.overall ?? '',
+    Player: r.Player ?? r.Name ?? r.PlayerName ?? r['Player Name'] ?? '',
+    Team:   r.Team ?? r.Tm ?? r['MLB Team'] ?? '',
+    Pos:    r.Pos ?? r.Position ?? r.Eligibility ?? '',
+    Tier:   r.Tier ?? r.T ?? '',
+    ADP:    r.ADP ?? r['Avg Draft Pos'] ?? '',
+    Notes:  r.Notes ?? r.Comment ?? r['Player Notes'] ?? ''
+  }));
+}
+
+function detectPlayerColumn(headers){
+  return headers.find(h => /^(player|name|player\s*name)$/i.test(h));
+}
+function detectOwnerColumn(headers){
+  return headers.find(h => /(owner|team\s*name|fantasy\s*team|manager|roster)/i.test(h));
+}
+
+/* ===========================
+   Name canonicalization
+   =========================== */
+function canonName(name){
+  if (!name) return "";
+  return name
+    .normalize('NFD').replace(/\p{Diacritic}/gu, '')   // Á -> A
+    .replace(/\b(Jr|Sr|II|III|IV|V)\b\.?/gi, '')       // suffixes
+    .replace(/\s*\(.*?\)\s*$/,'')                      // remove (NYY RF)
+    .replace(/[.,']/g,'')                              // punctuation
+    .replace(/\s+/g,' ')                               // collapse spaces
+    .trim().toLowerCase();
+}
+
+/* ===========================
+   State & elements
+   =========================== */
+const state = {
+  rows: [],            // normalized ranking rows
+  sortKey: 'Rank',
+  sortDir: 'asc'
+};
+const ownedMap = new Map(); // canonName(player) => owner/team or 'Owned'
+
+const tbody   = document.querySelector('#table tbody');
+const searchEl= document.getElementById('search');
+const posEl   = document.getElementById('position');
+const teamEl  = document.getElementById('team');
+const onlyFAEl= document.getElementById('onlyFA');
+const reloadEl= document.getElementById('reload');
+const fileRanksEl  = document.getElementById('fileRanks');
+const fileLeagueEl = document.getElementById('fileLeague');
+
+/* ===========================
+   Render
+   =========================== */
+function tierClass(t){
+  const n = parseInt(t,10);
+  return isNaN(n) ? 'tier' : `tier tier-${Math.min(Math.max(n,1),4)}`;
+}
+
+function render(){
+  // filters
+  const q = (searchEl.value || '').toLowerCase();
+  const pos = posEl.value;
+  const team = teamEl.value;
+  let filtered = state.rows.filter(r => {
+    const hit =
+      (r.Player || '').toLowerCase().includes(q) ||
+      (r.Team || '').toLowerCase().includes(q);
+    const posOK = !pos || (r.Pos || '').split('/').map(s => s.trim()).includes(pos);
+    const teamOK= !team || (r.Team || '') === team;
+    return hit && posOK && teamOK;
+  });
+
+  // sort
+  const key = state.sortKey;
+  const dir = state.sortDir === 'asc' ? 1 : -1;
+  filtered.sort((a,b)=>{
+    const colType = document.querySelector(`thead th[data-key="${key}"]`)?.dataset.type || 'string';
+    let va = a[key] ?? '';
+    let vb = b[key] ?? '';
+    if (colType === 'number'){ va = parseFloat(va)||0; vb = parseFloat(vb)||0; }
+    else { va = String(va).toLowerCase(); vb = String(vb).toLowerCase(); }
+    if (va < vb) return -1*dir;
+    if (va > vb) return  1*dir;
+    return 0;
+  });
+
+  // paint
+  const onlyFA = onlyFAEl.checked;
+  const rowsHTML = [];
+  for (const r of filtered){
+    const owner = ownedMap.get(canonName(r.Player));
+    const isFA = !owner;
+    if (onlyFA && !isFA) continue;
+
+    rowsHTML.push(`
+      <tr>
+        <td class="rank">${r.Rank ?? ''}</td>
+        <td>
+          <div>${r.Player ?? ''}</div>
+          <div class="meta">${r.ADP ? `ADP: ${r.ADP}` : ''}</div>
+        </td>
+        <td>${r.Team ?? ''}</td>
+        <td>${r.Pos ?? ''}</td>
+        <td>${r.Tier ? `<span class="${tierClass(r.Tier)}">Tier ${r.Tier}</span>` : ''}</td>
+        <td>${r.Notes ?? ''}</td>
+        <td style="font-weight:600; color:${isFA ? 'var(--accent-2)' : '#e7edf3'};">
+          ${isFA ? 'FA' : `Owned${owner && owner!=='Owned' ? ` by ${owner}` : ''}`}
+        </td>
+      </tr>
+    `);
+  }
+  tbody.innerHTML = rowsHTML.join('');
+}
+
+/* ===========================
+   Events
+   =========================== */
+document.querySelectorAll('thead th').forEach(th => {
+  th.addEventListener('click', () => {
+    const k = th.dataset.key;
+    if (!k) return;
+    if (state.sortKey === k) state.sortDir = state.sortDir === 'asc' ? 'desc' : 'asc';
+    else { state.sortKey = k; state.sortDir = 'asc'; }
+    render();
+  });
+});
+[searchEl, posEl, teamEl, onlyFAEl].forEach(el => el.addEventListener('input', render));
+reloadEl.addEventListener('click', () => autoLoad(true));
+
+fileRanksEl.addEventListener('change', async (e) => {
+  try {
+    const f = e.target.files[0]; if (!f) return;
+    const text = await f.text();
+    const { headers, rows, delim } = parseCSVFlexible(text);
+    const normalized = normalizeRankingsRows(rows).filter(r => r.Player);
+    if (!normalized.length) {
+      setStatus(`Could not find a Player column in rankings. Headers: ${headers.join(', ')}`, 'error'); return;
+    }
+    state.rows = normalized;
+    setStatus(`Loaded rankings from file picker (${normalized.length} rows; delim: ${delim === '\t' ? 'TAB' : delim}).`, 'ok');
+    render();
+  } catch (err){ console.error(err); setStatus('Error loading rankings file.', 'error'); }
+});
+
+fileLeagueEl.addEventListener('change', async (e) => {
+  try {
+    const f = e.target.files[0]; if (!f) return;
+    const text = await f.text();
+    const { headers, rows, delim } = parseCSVFlexible(text);
+    const pCol = detectPlayerColumn(headers);
+    const oCol = detectOwnerColumn(headers);
+    if (!pCol) { setStatus(`League CSV missing Player/Name column. Headers: ${headers.join(', ')}`, 'error'); return; }
+    ownedMap.clear();
+    rows.forEach(r => {
+      const name = r[pCol]; const owner = oCol ? r[oCol] : 'Owned';
+      if (name) ownedMap.set(canonName(name), owner || 'Owned');
+    });
+    setStatus(`Loaded league ownership from file picker (${ownedMap.size} players; delim: ${delim === '\t' ? 'TAB' : delim}).`, 'ok');
+    render();
+  } catch (err){ console.error(err); setStatus('Error loading league file.', 'error'); }
+});
+
+/* ===========================
+   Auto-load CSVs on page load
+   =========================== */
+async function loadCSVfromURL(url){
+  const r = await fetch(url, { cache: 'no-store' });
+  if (!r.ok) throw new Error(`${r.status} ${r.statusText}`);
+  const text = await r.text();
+  return parseCSVFlexible(text);
+}
+
+async function autoLoad(force=false){
+  clearStatus();
+  const params = new URLSearchParams(location.search);
+  const ranksURL  = params.get('rankings') || 'rankings.csv';
+  const leagueURL = params.get('league')   || 'league.csv';
+
+  let loadedAny = false;
+  // rankings
+  try {
+    const { headers, rows, delim } = await loadCSVfromURL(ranksURL);
+    const normalized = normalizeRankingsRows(rows).filter(r => r.Player);
+    if (normalized.length){
+      state.rows = normalized;
+      loadedAny = true;
+      setStatus(`Loaded rankings (${normalized.length} rows) from ${ranksURL} [${delim === '\t' ? 'TAB' : delim}].`, 'ok');
+    } else {
+      setStatus(`Rankings file "${ranksURL}" loaded but no players found. Headers: ${headers.join(', ')}`, 'warn');
+    }
+  } catch (e){
+    if (force) setStatus(`Failed to load rankings at "${ranksURL}": ${e.message}`, 'error');
+    else setStatus(`Could not auto-load rankings at "${ranksURL}". Use the "Choose Rankings CSV" button.`, 'warn');
+  }
+
+  // league owned
+  try {
+    const { headers, rows, delim } = await loadCSVfromURL(leagueURL);
+    const pCol = detectPlayerColumn(headers);
+    const oCol = detectOwnerColumn(headers);
+    if (!pCol){
+      setStatus(`League file "${leagueURL}" missing Player/Name column. Headers: ${headers.join(', ')}`, 'warn');
+    } else {
+      ownedMap.clear();
+      rows.forEach(r => {
+        const name = r[pCol]; const owner = oCol ? r[oCol] : 'Owned';
+        if (name) ownedMap.set(canonName(name), owner || 'Owned');
+      });
+      loadedAny = true;
+      setStatus(`Loaded league ownership (${ownedMap.size} rows) from ${leagueURL} [${delim === '\t' ? 'TAB' : delim}].`, 'ok');
+    }
+  } catch (e){
+    if (force) setStatus(`Failed to load league at "${leagueURL}": ${e.message}`, 'error');
+    else setStatus(`Could not auto-load league at "${leagueURL}". Use the "Choose League CSV" button.`, 'warn');
+  }
+
+  if (!loadedAny) {
+    // show a friendly hint for local file protocol
+    setStatus('If you opened this file via "file://", your browser may block fetch(). Start a tiny local server (e.g., python -m http.server) or use the file pickers above.', 'warn');
+  }
+
+  render();
+}
+
+document.addEventListener('DOMContentLoaded', () => autoLoad(false));
+</script>
+</body>
+</html>
